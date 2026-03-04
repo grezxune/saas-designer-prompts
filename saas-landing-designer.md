@@ -85,7 +85,8 @@ Each preset defines: `palette`, `typography`, `identity`, and `imageMood` (Unspl
 
 Before generating UI, create a `variationPlan` object and apply it to every section.
 
-- **Seed:** `brand name + purpose + preset`.
+- **Seed:** `brand name + purpose + preset + runNonce`.
+- **Run entropy:** include a required `runNonce` on every generation attempt so the same brand does not lock to one animation pattern forever.
 - **Required randomized ranges:**
   - `featureTileCount`: 2-6
   - `protocolStepCount`: 2-5
@@ -96,8 +97,12 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
   - `sectionOrderTemplate`: pick 1 of 8 templates with Navbar first and Footer last
   - `motionProfile`: `cinematic-float` | `crisp-editorial` | `mechanical-precision` | `quiet-luxury`
   - `visualMotif`: `grid` | `orbits` | `scanlines` | `glass-panels` | `paper-cuts` | `topographic-lines`
-- **Novelty gate:** compared to previous output, at least 4 of these must differ: section order, hero layout, feature tile count, protocol step count, offer block count, type pairing, motion profile, dominant motif.
-- If novelty gate fails, regenerate `variationPlan` once.
+  - `featureAnimationPlan`: unique archetype assignment list with length = `featureTileCount`
+  - `protocolAnimationPlan`: unique archetype assignment list with length = `protocolStepCount`
+  - `tileGifDescriptors`: unique short descriptors for each feature tile animation
+- **Novelty gate:** compared to recent outputs, at least 5 of these must differ: section order, hero layout, feature tile count, protocol step count, offer block count, type pairing, motion profile, dominant motif, feature archetype set, protocol archetype set, tile GIF descriptor set.
+- If novelty gate fails, regenerate `variationPlan` up to 2 times.
+- Respect session `animationRegistry`; never reuse any prior archetype ID or tile GIF descriptor from the same session.
 
 ---
 
@@ -116,12 +121,17 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
 
 ### C. FEATURES — "Interactive Functional Artifacts"
 - Build `featureTileCount` interactive cards from value props.
-- Use 1-2 anchor patterns plus diverse additional patterns so no repeated set/order across builds.
-- Anchor patterns:
+- Build `featureAnimationPlan` before card markup:
+  - each tile gets `animationArchetypeId`, `primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`, `gifDescriptor`
+  - no duplicate `animationArchetypeId` or `gifDescriptor` within the same output
+  - adjacent tiles must differ across at least 3 axes (`primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`)
+- Never hardcode a fixed first-three tile order. Shuffle or rotate assignment from plan per run.
+- Archetype pool examples:
   - Diagnostic Shuffler
   - Telemetry Typewriter
   - Cursor Protocol Scheduler
-- Additional pool examples: radial KPI dial, timeline scrubber, command palette preview, split funnel analyzer, queue heatmap, waveform comparator.
+- Additional pool examples: radial KPI dial, timeline scrubber, command palette preview, split funnel analyzer, queue heatmap, waveform comparator, packet lattice, kinetic sparkline matrix.
+- If pool capacity is exhausted, compose a hybrid archetype and assign a new ID; do not reuse an existing ID.
 
 ### D. PHILOSOPHY — "The Manifesto"
 - Full-width dark section with low-opacity parallax texture.
@@ -133,7 +143,9 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
 ### E. PROTOCOL — "Sticky Stacking Archive"
 - Build `protocolStepCount` full-screen stacked cards with pinning.
 - Underlying card scales to `0.9`, blurs to `20px`, fades to `0.5`.
-- Each card gets unique canvas/SVG animation from a pool.
+- Each card gets a unique canvas/SVG animation from `protocolAnimationPlan`.
+- Protocol archetypes must be unique within protocol cards and must not reuse feature tile archetype IDs in the same output.
+- Protocol cards must vary by at least 3 axes (`motion primitive`, `tempo`, `spatial path`, `phase offset`, `line style`).
 
 ### F. PRICING / CONVERSION
 - Generate `offerBlockCount` blocks (1-3).
@@ -164,8 +176,10 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
 2. Build seeded `variationPlan`.
 3. Generate hero and conversion copy.
 4. Build sections from variant rules and randomized counts.
-5. Validate novelty gate and regenerate plan once if needed.
-6. Implement in Next.js + Tailwind + GSAP with complete interactions.
-7. Run lint/typecheck and ensure all images/interactions work.
+5. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors.
+6. Validate novelty gate and regenerate plan (max 2 retries) if needed.
+7. Persist this output's archetype descriptors into `noveltyMemory`.
+8. Implement in Next.js + Tailwind + GSAP with complete interactions.
+9. Run lint/typecheck and ensure all images/interactions work.
 
 **Execution Directive:** "Do not build a website; build a digital instrument. Every scroll should feel intentional, every animation should feel weighted and professional. Eradicate all generic AI patterns."

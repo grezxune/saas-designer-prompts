@@ -35,6 +35,8 @@ Both mode files require a `variationPlan` and novelty checks to reduce repeated 
 - dynamic counts (tiles, steps, nav links, etc.)
 - alternate compositions (hero, section ordering, shell layout)
 - motion and visual motif variance
+- per-run `runNonce` entropy + short-term `noveltyMemory`
+- no-repeat animation archetype and tile GIF descriptor constraints
 
 ## Recommended Usage in Agent Runs
 
@@ -47,3 +49,30 @@ Both mode files require a `variationPlan` and novelty checks to reduce repeated 
 - Reusable, production-minded prompt standards
 - Premium, non-generic output
 - Consistent UX across marketing and product UI
+
+## Cross-Project CLI
+
+Generate a redesign packet from any repo:
+
+```bash
+/Users/tommy/Documents/code/grez-studios/saas-designer-prompts/bin/saas-redesign \
+  --mode platform \
+  --target "dashboard KPI tiles" \
+  --brand "Nura Health" \
+  --purpose "Precision longevity operations" \
+  --value-props "Live telemetry,Fast triage,Trusted audit trail" \
+  --json
+```
+
+Behavior:
+- Always creates a fresh `runNonce`.
+- Uses a persistent uniqueness registry (default: `~/.saas-designer-prompts/uniqueness-registry.json`).
+- Never reuses stored feature/protocol animation signatures or tile GIF descriptors.
+
+Optional setup for global command:
+
+```bash
+cd /Users/tommy/Documents/code/grez-studios/saas-designer-prompts
+bun link
+saas-redesign --target "billing table interactions"
+```

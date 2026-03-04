@@ -91,7 +91,8 @@ These rules apply to ALL presets. They are what make the output premium.
 
 Before generating UI, create a `variationPlan` object and use it to drive all layout and interaction decisions.
 
-- **Seed:** Derive from `brand name + purpose + preset` so variation is deterministic per project but different across projects.
+- **Seed:** Derive from `brand name + purpose + preset + runNonce`.
+- **Run entropy:** `runNonce` is required on every generation attempt so repeated runs for one brand do not lock to the same animations.
 - **Required randomized ranges:**
   - `featureTileCount`: 2-6
   - `protocolStepCount`: 2-5
@@ -107,7 +108,10 @@ Before generating UI, create a `variationPlan` object and use it to drive all la
   - `visualMotif`: `grid` | `orbits` | `scanlines` | `glass-panels` | `paper-cuts` | `topographic-lines`
   - `appShellLayout`: `left-sidebar` | `dual-sidebar` | `top-nav + subnav` | `rail + panels`
   - `dashboardComposition`: `kpi-first` | `activity-first` | `workflow-first` | `mixed-command-center`
-- **Novelty gate (must pass):** Compared to the previous output, at least 4 of these must differ:
+  - `featureAnimationPlan`: unique archetype assignment list with length = `featureTileCount`
+  - `protocolAnimationPlan`: unique archetype assignment list with length = `protocolStepCount`
+  - `tileGifDescriptors`: unique short descriptors for each feature tile animation
+- **Novelty gate (must pass):** Compared to recent outputs, at least 5 of these must differ:
   - section order
   - hero layout
   - feature tile count
@@ -118,7 +122,11 @@ Before generating UI, create a `variationPlan` object and use it to drive all la
   - dominant visual motif
   - app shell layout
   - dashboard composition
-- If novelty gate fails, regenerate `variationPlan` once before building.
+  - feature archetype set
+  - protocol archetype set
+  - tile GIF descriptor set
+- If novelty gate fails, regenerate `variationPlan` up to 2 times before building.
+- Respect session `animationRegistry`; never reuse any prior archetype ID or tile GIF descriptor from the same session.
 
 ---
 
@@ -139,15 +147,15 @@ A `fixed` pill-shaped container, horizontally centered.
 ### C. FEATURES — "Interactive Functional Artifacts"
 Generate `featureTileCount` cards/tiles. Use the user's value props as source material, expanding or compressing copy as needed to fit the selected count. These must feel like **functional software micro-UIs**, not static marketing cards.
 
-Use 1-2 anchor patterns from this library, then generate the remaining cards from different patterns so no two builds keep the same set/order:
+Build and validate `featureAnimationPlan` before writing card markup:
+- each tile gets `animationArchetypeId`, `primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`, `gifDescriptor`
+- no duplicate `animationArchetypeId` or `gifDescriptor` within the same output
+- adjacent tiles must differ across at least 3 axes (`primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`)
+- never hardcode a fixed first-three tile order; assign archetypes from plan in shuffled/rotated order per run
 
-**Card 1 — "Diagnostic Shuffler":** 3 overlapping cards that cycle vertically using `array.unshift(array.pop())` logic every 3 seconds with a spring-bounce transition (`cubic-bezier(0.34, 1.56, 0.64, 1)`). Labels derived from user's first value prop (generate 3 sub-labels).
+Archetype pool examples: Diagnostic Shuffler, Telemetry Typewriter, Cursor Protocol Scheduler, radial KPI dial, timeline scrubber, command palette preview, split funnel analyzer, queue heatmap, waveform comparator, packet lattice, kinetic sparkline matrix.
 
-**Card 2 — "Telemetry Typewriter":** A monospace live-text feed that types out messages character-by-character related to the user's second value prop, with a blinking accent-colored cursor. Include a "Live Feed" label with a pulsing dot.
-
-**Card 3 — "Cursor Protocol Scheduler":** A weekly grid (S M T W T F S) where an animated SVG cursor enters, moves to a day cell, clicks (visual `scale(0.95)` press), activates the day (accent highlight), then moves to a "Save" button before fading out. Labels from user's third value prop.
-
-Additional pattern pool (pick from these and/or invent one project-specific pattern): radial KPI dial, timeline scrubber, command palette preview, split funnel analyzer, queue heatmap, waveform comparator.
+If pool capacity is exhausted, compose a hybrid archetype and mint a new ID instead of reusing an existing one.
 
 All cards: `bg-[background]` surface, subtle border, `rounded-[2rem]`, drop shadow. Each card has a heading (sans bold) and a brief descriptor.
 
@@ -162,7 +170,10 @@ All cards: `bg-[background]` surface, subtle border, `rounded-[2rem]`, drop shad
 ### E. PROTOCOL — "Sticky Stacking Archive"
 Generate `protocolStepCount` full-screen cards that stack on scroll.
 - **Stacking Interaction:** Using GSAP ScrollTrigger with `pin: true`. As a new card scrolls into view, the card underneath scales to `0.9`, blurs to `20px`, and fades to `0.5`.
-- **Each card gets a unique canvas/SVG animation** selected from a pool: rotating geometric motif, scanning laser-line, pulsing waveform, particle drift field, path-trace map.
+- **Each card gets a unique canvas/SVG animation** from `protocolAnimationPlan`.
+- Protocol archetypes must be unique within protocol cards and must not reuse feature tile archetype IDs in the same output.
+- Protocol cards must vary by at least 3 axes (`motion primitive`, `tempo`, `spatial path`, `phase offset`, `line style`).
+- Base pool examples: rotating geometric motif, scanning laser-line, pulsing waveform, particle drift field, path-trace map, contour sweep graph.
 - Card content: Step number (monospace), title (heading font), 2-line description. Derive from user's brand purpose.
 
 ### F. MEMBERSHIP / PRICING
@@ -255,9 +266,11 @@ After receiving answers to the 8 questions:
 6. Implement required routes and modules for onboarding, dashboard, entity CRUD, settings, and selected extras.
 7. Implement auth wiring, role-based guards (when applicable), and billing/email integrations when selected.
 8. Define Convex schema and indexes aligned to core entities and ownership boundaries.
-9. Validate novelty gate; if it fails, regenerate `variationPlan` once.
-10. Scaffold with bun + Next.js App Router, install deps, write all files.
-11. Ensure every animation is wired, every interaction works, every image loads, and core CRUD flows are functional.
-12. Run lint, typecheck, and targeted tests before completion.
+9. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors.
+10. Validate novelty gate; if it fails, regenerate `variationPlan` (max 2 retries).
+11. Persist this output's archetype descriptors into `noveltyMemory`.
+12. Scaffold with bun + Next.js App Router, install deps, write all files.
+13. Ensure every animation is wired, every interaction works, every image loads, and core CRUD flows are functional.
+14. Run lint, typecheck, and targeted tests before completion.
 
 **Execution Directive:** "Do not build a website; build a digital instrument. Every scroll should feel intentional, every animation should feel weighted and professional. Eradicate all generic AI patterns."

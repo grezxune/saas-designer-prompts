@@ -1,0 +1,13 @@
+{
+  "name": "saas-designer-prompts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "saas-redesign": "bin/saas-redesign"
+  },
+  "scripts": {
+    "redesign": "bun run src/cli/redesign-prompt.ts",
+    "test": "bun test"
+  }
+}

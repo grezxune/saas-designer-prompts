@@ -69,11 +69,29 @@ Use these preset definitions consistently across all prompt variants.
 
 ## Shared Variation Rules
 
-Create a seeded `variationPlan` per build using `brand + purpose + preset`.
+Create a seeded `variationPlan` per build using `brand + purpose + preset + runNonce`.
+
+- `runNonce` is required on every generation attempt (timestamp fragment, increment, or random slug) to avoid lock-in to one repeated output shape.
+- Include `noveltyMemory` for at least the last 5 outputs:
+  - `featureAnimationArchetypes` (ordered IDs)
+  - `protocolAnimationArchetypes` (ordered IDs)
+  - `tileGifDescriptors` (short labels)
 
 - Require variable structure/composition across runs.
 - Require novelty checks against previous output before finalizing.
-- If novelty fails, regenerate variation choices once.
+- If novelty fails, regenerate variation choices up to 2 times.
+
+### Hard No-Repeat Contract (Required)
+
+- Within a single output, never reuse the same `animationArchetypeId` across feature tiles.
+- Within a single output, never reuse the same `animationArchetypeId` across protocol cards.
+- Within a single output, never reuse the same tile GIF descriptor.
+- Compared to the last 5 outputs in `noveltyMemory`, do not emit:
+  - an identical ordered feature archetype list,
+  - an identical ordered protocol archetype list, or
+  - an identical tile GIF descriptor set.
+- Maintain a session-scoped `animationRegistry` of all emitted archetype IDs and GIF descriptors; do not reuse any registered value in the same session.
+- If a collision is detected after retries, mutate animation parameters (primitive, tempo, pathing, phase, easing) and re-hash IDs before finalizing.
 
 Minimum novelty axes:
 - section order
@@ -82,6 +100,7 @@ Minimum novelty axes:
 - motion profile
 - dominant visual motif
 - type treatment
+- animation archetype sets (features + protocol)
 
 ---
 
