@@ -10,6 +10,8 @@ Unified prompt system for generating either:
 - `saas-ux-core-rules.md`: Shared UX and styling source of truth.
 - `saas-landing-designer.md`: Landing-page execution rules.
 - `saas-platform-designer.md`: Full SaaS platform execution rules.
+- `CONTRIBUTING.md`: Contribution workflow and guardrails.
+- `LICENSE`: MIT license.
 
 ## Process (Always Follow)
 
