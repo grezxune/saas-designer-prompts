@@ -46,13 +46,14 @@ Optional OpenRouter BYOK parser (for richer intent extraction):
 
 ```bash
 export OPENROUTER_API_KEY=...
-./bin/saas-redesign --request-file /abs/path/request.txt --openrouter-model openai/gpt-4o-mini
+./bin/saas-redesign --request-file /abs/path/request.txt --openrouter-model openai/gpt-5.3-codex
 ```
 
 Parsing precedence:
 - Explicit CLI flags override parsed request fields.
 - If OpenRouter is not configured or fails, parsing falls back to the local heuristic parser.
 - Optional env vars: `OPENROUTER_MODEL`, `OPENROUTER_BASE_URL`.
+- Project default model (when unset): `openai/gpt-5.3-codex`.
 
 Novelty controls:
 

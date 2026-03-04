@@ -149,7 +149,7 @@ OpenRouter-powered parser (bring your own key):
 export OPENROUTER_API_KEY=...
 saas-redesign \
   --request-file /abs/path/redesign-request.txt \
-  --openrouter-model openai/gpt-4o-mini \
+  --openrouter-model openai/gpt-5.3-codex \
   --json
 ```
 
@@ -161,6 +161,7 @@ Notes:
   - `OPENROUTER_API_KEY` (required for AI parsing)
   - `OPENROUTER_MODEL` (default model when `--openrouter-model` is not provided)
   - `OPENROUTER_BASE_URL` (defaults to `https://openrouter.ai/api/v1`)
+- Project default model (if neither env nor flag is set): `openai/gpt-5.3-codex`.
 
 ### CLI Option Reference
 
@@ -186,7 +187,7 @@ Iteration and seed flow:
 Plain-English request flow:
 - `--request "..."`
 - `--request-file /abs/path/request.txt`
-- `--openrouter-model openai/gpt-4o-mini`
+- `--openrouter-model openai/gpt-5.3-codex`
 - `--no-ai`
 
 Novelty and output controls:

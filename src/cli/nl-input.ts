@@ -75,7 +75,7 @@ async function readRequestFile(filePath: string): Promise<string> {
 
 async function parseWithOpenRouter(
   raw: string,
-  model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini",
+  model = process.env.OPENROUTER_MODEL ?? "openai/gpt-5.3-codex",
 ): Promise<unknown> {
   const baseUrl = process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
   const apiKey = process.env.OPENROUTER_API_KEY;

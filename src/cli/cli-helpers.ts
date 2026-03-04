@@ -68,7 +68,7 @@ export function printHelp(): void {
   process.stdout.write(`  --tweak \"what to change from prior session\"\n`);
   process.stdout.write(`  --request \"plain english redesign request\"\n`);
   process.stdout.write(`  --request-file /abs/path/request.txt\n`);
-  process.stdout.write(`  --openrouter-model openai/gpt-4o-mini\n`);
+  process.stdout.write(`  --openrouter-model openai/gpt-5.3-codex\n`);
   process.stdout.write(`  --no-ai (skip OpenRouter and use local heuristic parser)\n`);
   process.stdout.write(`  --capture-current (create baseline seed from current project state)\n`);
   process.stdout.write(`  --current-state \"brief snapshot of current UI/UX state\"\n`);
