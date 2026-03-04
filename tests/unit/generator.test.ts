@@ -29,16 +29,27 @@ describe("generateRedesignPacket", () => {
     expect(featureSignatures.size).toBe(packet.featureAnimations.length);
     expect(protocolSignatures.size).toBe(packet.protocolAnimations.length);
     expect(gifDescriptors.size).toBe(packet.featureAnimations.length);
+    expect(packet.layoutSignature.length).toBeGreaterThan(12);
+    expect(packet.layoutVariantPlan.marketingHeaderPattern.length).toBeGreaterThan(3);
+    expect(packet.layoutVariantPlan.sectionOrderTemplate.includes("hero")).toBe(true);
+    expect(packet.layoutVariantPlan.heroAdjacentPattern.length).toBeGreaterThan(3);
+    expect(packet.layoutVariantPlan.appPageVariants).toBeDefined();
     expect(featureArchetypes.size).toBe(packet.featureAnimations.length);
     expect(protocolArchetypes.size).toBe(packet.protocolAnimations.length);
     for (const feature of packet.featureAnimations) {
       expect(feature.signature.includes("undefined")).toBe(false);
       expect(feature.gifDescriptor.includes("undefined")).toBe(false);
       expect(feature.tempoMs).toBeGreaterThan(0);
+      expect(feature.gsapRecipe.steps.length).toBeGreaterThan(0);
+      expect(feature.gsapRecipe.targetSelector.includes(".feature-tile-")).toBe(true);
+      expect(feature.gsapRecipe.reducedMotion.durationScale).toBeGreaterThan(0);
     }
     for (const protocol of packet.protocolAnimations) {
       expect(protocol.signature.includes("undefined")).toBe(false);
       expect(protocol.tempoMs).toBeGreaterThan(0);
+      expect(protocol.gsapRecipe.trigger).toBe("scroll");
+      expect(protocol.gsapRecipe.steps.length).toBeGreaterThan(0);
+      expect(protocol.gsapRecipe.targetSelector.includes(".protocol-step-")).toBe(true);
     }
   });
 });

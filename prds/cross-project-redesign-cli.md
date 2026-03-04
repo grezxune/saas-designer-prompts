@@ -5,6 +5,9 @@ owner: Tommy
 log:
   - 2026-03-04: Initial requirements documented for a terminal-invokable redesign prompt generator.
   - 2026-03-04: Implemented Bun CLI, persistent uniqueness registry, and tests for cross-run no-repeat guarantees.
+  - 2026-03-04: Added explicit GSAP recipe payloads per animation so implementation agents can execute motion deterministically.
+  - 2026-03-04: Added saved-session and resume/tweak loop so agents can iterate from prior seeds without full re-specification.
+  - 2026-03-04: Added layout variance requirements (header patterns + section/page templates) so seeds choose full composition plans in tandem.
 ---
 
 ## Problem
@@ -31,8 +34,14 @@ The prompt repository should behave like a shared design engine that can be call
 3. CLI persists and consults a registry of previously emitted archetype IDs/descriptors.
 4. CLI must never emit an already-registered feature/protocol archetype ID or GIF descriptor.
 5. CLI emits a ready-to-use prompt packet as markdown (and optional JSON mode).
-6. CLI supports explicit registry path for team-shared state.
-7. CLI supports `--dry-run` mode that does not write registry.
+6. CLI emits explicit GSAP recipe objects for each feature/protocol animation (trigger, step sequence, easing, reduced-motion strategy).
+7. CLI supports explicit registry path for team-shared state.
+8. CLI supports `--dry-run` mode that does not write registry.
+9. CLI persists each generated packet as a session artifact by default (id + path + input + output payload).
+10. CLI supports `--resume <session-id-or-path>` to load prior input context for iterative tweaks.
+11. CLI supports `--tweak` notes and emits source-session metadata in packet output for delta implementation.
+12. CLI packet must include `layoutVariantPlan` with header pattern, main-page composition, and app-page template variants.
+13. CLI uniqueness system must track and avoid repeated layout signatures across runs.
 
 ## Non-functional Requirements
 - Keep files modular and under readability limits.

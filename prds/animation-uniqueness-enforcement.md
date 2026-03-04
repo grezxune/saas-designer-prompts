@@ -5,6 +5,7 @@ owner: Tommy
 log:
   - 2026-03-04: Initial requirements documented for eliminating repeated tile animations in generated outputs.
   - 2026-03-04: Implemented shared no-repeat contract, runNonce entropy, noveltyMemory/session registry rules, and mode-specific animation plan enforcement.
+  - 2026-03-04: Expanded novelty scope to include header/navigation style and section/page layout variants selected with the same seed plan.
 ---
 
 ## Problem
@@ -32,6 +33,7 @@ This repository is used as a reusable prompt spec for generating high-fidelity S
 4. Prompt must enforce diversity in motion timing/profile so cards are not only visually different but behaviorally different.
 5. Prompt must require a short-term novelty memory (recent outputs) and reject regeneration if reuse threshold is exceeded.
 6. Prompt must include deterministic fallback behavior when available archetypes are exhausted (mutate parameters and interaction model).
+7. Variation plan must include header and layout template variants so composition changes with animation decisions.
 
 ## Non-functional Requirements
 - Prompt logic should remain concise and implementable.

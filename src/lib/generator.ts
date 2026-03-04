@@ -1,54 +1,17 @@
 import { createRng, pickInt, pickOne, shortHash } from "./random";
 import type { UniquenessRegistry } from "./registry";
 import { buildPromptMarkdown } from "./prompt-markdown";
-
-export type Mode = "landing" | "platform";
-export type Preset = "A" | "B" | "C" | "D";
-
-export interface RedesignInput {
-  mode: Mode;
-  target: string;
-  brand: string;
-  purpose: string;
-  preset: Preset;
-  runNonce: string;
-  valueProps: string[];
-  cta: string;
-  featureTileCount?: number;
-  protocolStepCount?: number;
-}
-
-export interface FeatureAnimation {
-  animationArchetypeId: string;
-  signature: string;
-  gifDescriptor: string;
-  primitive: string;
-  tempoMs: number;
-  pathProfile: string;
-  interactionModel: string;
-  easing: string;
-}
-
-export interface ProtocolAnimation {
-  animationArchetypeId: string;
-  signature: string;
-  primitive: string;
-  tempoMs: number;
-  spatialPath: string;
-  phaseOffset: string;
-  lineStyle: string;
-}
-
-export interface RedesignPacket {
-  generatedAt: string;
-  mode: Mode;
-  target: string;
-  preset: Preset;
-  runNonce: string;
-  featureAnimations: FeatureAnimation[];
-  protocolAnimations: ProtocolAnimation[];
-  promptMarkdown: string;
-}
+import type {
+  FeatureAnimation,
+  ProtocolAnimation,
+  RedesignInput,
+  RedesignPacket,
+} from "./redesign-types";
+import {
+  buildFeatureGsapRecipe,
+  buildProtocolGsapRecipe,
+} from "./gsap-recipe";
+import { createUniqueLayoutVariantPlan } from "./layout-variants";
 
 const FEATURE_ARCHETYPES = [
   "diagnostic-shuffler", "telemetry-typewriter", "cursor-protocol-scheduler", "radial-kpi-dial",
@@ -81,11 +44,13 @@ export function generateRedesignPacket(input: RedesignInput, registry: Uniquenes
   const usedFeature = new Set(registry.featureSignatures);
   const usedProtocol = new Set(registry.protocolSignatures);
   const usedGif = new Set(registry.gifDescriptors);
+  const usedLayouts = new Set(registry.layoutSignatures);
   const localFeature = new Set<string>();
   const localProtocol = new Set<string>();
   const localGif = new Set<string>();
   const localFeatureArchetypes = new Set<string>();
   const localProtocolArchetypes = new Set<string>();
+  const { layoutVariantPlan, layoutSignature } = createUniqueLayoutVariantPlan(input.mode, rng, usedLayouts);
 
   const featureAnimations: FeatureAnimation[] = [];
   for (let i = 0; i < featureTileCount; i += 1) {
@@ -116,9 +81,13 @@ export function generateRedesignPacket(input: RedesignInput, registry: Uniquenes
     target: input.target,
     preset: input.preset,
     runNonce: input.runNonce,
+    sourceSessionId: input.sourceSessionId,
+    tweakNotes: input.tweakNotes,
+    layoutSignature,
+    layoutVariantPlan,
     featureAnimations,
     protocolAnimations,
-    promptMarkdown: buildPromptMarkdown(input, featureAnimations, protocolAnimations),
+    promptMarkdown: buildPromptMarkdown(input, layoutVariantPlan, layoutSignature, featureAnimations, protocolAnimations),
   };
 }
 
@@ -160,6 +129,14 @@ function createUniqueFeature(
         pathProfile,
         interactionModel,
         easing,
+        gsapRecipe: buildFeatureGsapRecipe({
+          index,
+          primitive,
+          tempoMs,
+          pathProfile,
+          interactionModel,
+          easing,
+        }),
       };
     }
   }
@@ -193,6 +170,14 @@ function createUniqueProtocol(
         spatialPath,
         phaseOffset,
         lineStyle,
+        gsapRecipe: buildProtocolGsapRecipe({
+          index,
+          primitive,
+          tempoMs,
+          spatialPath,
+          phaseOffset,
+          lineStyle,
+        }),
       };
     }
   }

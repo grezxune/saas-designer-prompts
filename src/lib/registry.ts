@@ -9,6 +9,7 @@ export interface RegistrySession {
   featureSignatures: string[];
   protocolSignatures: string[];
   gifDescriptors: string[];
+  layoutSignatures: string[];
 }
 
 export interface UniquenessRegistry {
@@ -17,6 +18,7 @@ export interface UniquenessRegistry {
   featureSignatures: string[];
   protocolSignatures: string[];
   gifDescriptors: string[];
+  layoutSignatures: string[];
   sessions: RegistrySession[];
 }
 
@@ -38,6 +40,7 @@ export function createEmptyRegistry(): UniquenessRegistry {
     featureSignatures: [],
     protocolSignatures: [],
     gifDescriptors: [],
+    layoutSignatures: [],
     sessions: [],
   };
 }
@@ -79,10 +82,12 @@ export function recordSession(
   const featureSet = new Set(registry.featureSignatures);
   const protocolSet = new Set(registry.protocolSignatures);
   const gifSet = new Set(registry.gifDescriptors);
+  const layoutSet = new Set(registry.layoutSignatures);
 
   for (const sig of session.featureSignatures) featureSet.add(sig);
   for (const sig of session.protocolSignatures) protocolSet.add(sig);
   for (const gif of session.gifDescriptors) gifSet.add(gif);
+  for (const layout of session.layoutSignatures) layoutSet.add(layout);
 
   const sessions = [session, ...registry.sessions].slice(0, 500);
 
@@ -92,6 +97,7 @@ export function recordSession(
     featureSignatures: [...featureSet],
     protocolSignatures: [...protocolSet],
     gifDescriptors: [...gifSet],
+    layoutSignatures: [...layoutSet],
     sessions,
   };
 }
@@ -112,9 +118,12 @@ function normalizeRegistry(input: Partial<UniquenessRegistry>): UniquenessRegist
     gifDescriptors: Array.isArray(input.gifDescriptors)
       ? input.gifDescriptors.filter((v): v is string => typeof v === "string")
       : [],
+    layoutSignatures: Array.isArray(input.layoutSignatures)
+      ? input.layoutSignatures.filter((v): v is string => typeof v === "string")
+      : [],
     sessions: Array.isArray(input.sessions)
       ? input.sessions
-          .filter((s): s is RegistrySession => {
+          .filter((s): s is Partial<RegistrySession> => {
             return Boolean(
               s &&
                 typeof s.generatedAt === "string" &&
@@ -126,6 +135,18 @@ function normalizeRegistry(input: Partial<UniquenessRegistry>): UniquenessRegist
                 Array.isArray(s.gifDescriptors),
             );
           })
+          .map((s) => ({
+            generatedAt: s.generatedAt as string,
+            mode: s.mode as "landing" | "platform",
+            target: s.target as string,
+            runNonce: s.runNonce as string,
+            featureSignatures: s.featureSignatures as string[],
+            protocolSignatures: s.protocolSignatures as string[],
+            gifDescriptors: s.gifDescriptors as string[],
+            layoutSignatures: Array.isArray(s.layoutSignatures)
+              ? (s.layoutSignatures.filter((v): v is string => typeof v === "string"))
+              : [],
+          }))
           .slice(0, 500)
       : [],
   };

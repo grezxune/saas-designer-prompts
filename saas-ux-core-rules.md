@@ -76,6 +76,13 @@ Create a seeded `variationPlan` per build using `brand + purpose + preset + runN
   - `featureAnimationArchetypes` (ordered IDs)
   - `protocolAnimationArchetypes` (ordered IDs)
   - `tileGifDescriptors` (short labels)
+  - `layoutSignatures` (header + section/page composition fingerprint)
+- Include `layoutVariantPlan` in every build:
+  - `marketingHeaderPattern` (for public pages)
+  - `heroAdjacentPattern` (the block directly after hero)
+  - `sectionOrderTemplate`
+  - `landingSectionVariants` (hero/features/philosophy/protocol/conversion/footer)
+  - `appPageVariants` (platform mode: app header + dashboard/entity/settings/billing templates)
 
 - Require variable structure/composition across runs.
 - Require novelty checks against previous output before finalizing.
@@ -89,8 +96,10 @@ Create a seeded `variationPlan` per build using `brand + purpose + preset + runN
 - Compared to the last 5 outputs in `noveltyMemory`, do not emit:
   - an identical ordered feature archetype list,
   - an identical ordered protocol archetype list, or
-  - an identical tile GIF descriptor set.
+  - an identical tile GIF descriptor set,
+  - an identical layout signature.
 - Maintain a session-scoped `animationRegistry` of all emitted archetype IDs and GIF descriptors; do not reuse any registered value in the same session.
+- Maintain a session-scoped `layoutRegistry`; do not reuse prior layout signatures in the same session.
 - If a collision is detected after retries, mutate animation parameters (primitive, tempo, pathing, phase, easing) and re-hash IDs before finalizing.
 
 Minimum novelty axes:
@@ -101,6 +110,7 @@ Minimum novelty axes:
 - dominant visual motif
 - type treatment
 - animation archetype sets (features + protocol)
+- header pattern + page composition templates
 
 ---
 

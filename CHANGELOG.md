@@ -9,5 +9,8 @@ All notable changes to this project will be documented in this file.
 - docs: add PRD for animation uniqueness strategy at `prds/animation-uniqueness-enforcement.md`.
 - feat: add cross-project Bun CLI (`saas-redesign`) to generate redesign packets for specific app slices.
 - feat: add persistent registry-backed uniqueness engine to prevent reused feature/protocol signatures and GIF descriptors across runs.
+- feat: add explicit per-animation `gsapRecipe` blocks so downstream agents can implement motion without inferring from signatures.
+- feat: add saved session artifacts + `--resume` / `--tweak` flow for iterative seed feedback without full regeneration setup.
+- feat: add layout variance engine (header styles, hero-adjacent blocks, section/page templates) with layout signature dedupe across runs.
 - test: add unit and integration tests for generation uniqueness and CLI registry behavior.
 - docs: add PRD `prds/cross-project-redesign-cli.md` and usage docs in `README.md`.

@@ -7,23 +7,41 @@ import {
   recordSession,
   saveRegistry,
 } from "../lib/registry";
-import { generateRedesignPacket, type Mode, type Preset } from "../lib/generator";
+import { generateRedesignPacket } from "../lib/generator";
 import { createRunNonce, pickOne } from "../lib/random";
+import type { Mode, Preset, RedesignInput } from "../lib/redesign-types";
+import {
+  getDefaultSessionDir,
+  loadSession,
+  saveSession,
+} from "../lib/session-store";
+import {
+  getString,
+  parseArgMap,
+  parseOptionalInt,
+  printHelp,
+  splitCsv,
+} from "./cli-helpers";
 
 interface CliOptions {
-  mode: Mode;
-  target: string;
-  brand: string;
-  purpose: string;
-  preset: Preset;
-  valueProps: string[];
-  cta: string;
+  mode?: Mode;
+  target?: string;
+  brand?: string;
+  purpose?: string;
+  preset?: Preset;
+  valueProps?: string[];
+  cta?: string;
   featureTileCount?: number;
   protocolStepCount?: number;
+  resumeRef?: string;
+  tweakNotes?: string;
+  preserveRunNonce: boolean;
   dryRun: boolean;
+  noSave: boolean;
   json: boolean;
   outPath?: string;
   registryPath: string;
+  sessionDir: string;
 }
 
 const PRESETS: Preset[] = ["A", "B", "C", "D"];
@@ -35,21 +53,10 @@ async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
   const registry = await loadRegistry(opts.registryPath).catch(() => createEmptyRegistry());
 
-  const packet = generateRedesignPacket(
-    {
-      mode: opts.mode,
-      target: opts.target,
-      brand: opts.brand,
-      purpose: opts.purpose,
-      preset: opts.preset,
-      runNonce: createRunNonce(),
-      valueProps: opts.valueProps,
-      cta: opts.cta,
-      featureTileCount: opts.featureTileCount,
-      protocolStepCount: opts.protocolStepCount,
-    },
-    registry,
-  );
+  const base = await resolveBaseInput(opts);
+  const input = buildRedesignInput(opts, base);
+
+  const packet = generateRedesignPacket(input, registry);
 
   if (!opts.dryRun) {
     const next = recordSession(registry, {
@@ -60,11 +67,16 @@ async function main(): Promise<void> {
       featureSignatures: packet.featureAnimations.map((item) => item.signature),
       protocolSignatures: packet.protocolAnimations.map((item) => item.signature),
       gifDescriptors: packet.featureAnimations.map((item) => item.gifDescriptor),
+      layoutSignatures: [packet.layoutSignature],
     });
     await saveRegistry(opts.registryPath, next);
   }
 
-  const output = opts.json ? JSON.stringify(packet, null, 2) : packet.promptMarkdown;
+  if (!opts.noSave) {
+    packet.session = await saveSession(opts.sessionDir, input, packet);
+  }
+
+  const output = opts.json ? JSON.stringify(packet, null, 2) : toMarkdownOutput(packet.promptMarkdown, packet.session);
   if (opts.outPath) {
     const targetPath = path.resolve(opts.outPath);
     await Bun.write(targetPath, output + "\n");
@@ -74,89 +86,76 @@ async function main(): Promise<void> {
   process.stdout.write(output + "\n");
 }
 
+async function resolveBaseInput(opts: CliOptions): Promise<Partial<RedesignInput>> {
+  if (!opts.resumeRef) return {};
+  const session = await loadSession(opts.sessionDir, opts.resumeRef);
+  return {
+    ...session.input,
+    sourceSessionId: session.id,
+  };
+}
+
+function buildRedesignInput(opts: CliOptions, base: Partial<RedesignInput>): RedesignInput {
+  const mode = opts.mode ?? base.mode ?? "platform";
+  const target = opts.target ?? base.target;
+  if (!target) throw new Error("Missing required --target argument (or provide --resume with a saved target).");
+
+  return {
+    mode,
+    target,
+    brand: opts.brand ?? base.brand ?? path.basename(process.cwd()),
+    purpose: opts.purpose ?? base.purpose ?? "Refine UX and interaction quality for this app.",
+    preset: opts.preset ?? base.preset ?? pickOne(PRESETS, Math.random),
+    runNonce: opts.preserveRunNonce && base.runNonce ? base.runNonce : createRunNonce(),
+    valueProps: opts.valueProps ?? base.valueProps ?? ["Higher clarity", "Faster action loops", "Distinctive UI motion"],
+    cta: opts.cta ?? base.cta ?? "Ship redesign",
+    featureTileCount: opts.featureTileCount ?? base.featureTileCount,
+    protocolStepCount: opts.protocolStepCount ?? base.protocolStepCount,
+    sourceSessionId: base.sourceSessionId,
+    tweakNotes: opts.tweakNotes,
+  };
+}
+
 function parseArgs(argv: string[]): CliOptions {
   if (argv.includes("--help") || argv.includes("-h")) {
     printHelp();
     process.exit(0);
   }
 
-  const map = new Map<string, string | true>();
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i];
-    if (!token.startsWith("--")) continue;
-    const key = token.slice(2);
-    const next = argv[i + 1];
-    if (!next || next.startsWith("--")) {
-      map.set(key, true);
-      continue;
-    }
-    map.set(key, next);
-    i += 1;
+  const map = parseArgMap(argv);
+  const modeRaw = getString(map, "mode") as Mode | undefined;
+  if (modeRaw && modeRaw !== "landing" && modeRaw !== "platform") {
+    throw new Error("--mode must be landing or platform.");
   }
 
-  const target = getString(map, "target");
-  if (!target) throw new Error("Missing required --target argument.");
-  const modeRaw = (getString(map, "mode") ?? "platform") as Mode;
-  if (modeRaw !== "landing" && modeRaw !== "platform") throw new Error("--mode must be landing or platform.");
-
   const presetRaw = getString(map, "preset")?.toUpperCase() as Preset | undefined;
-  const preset = PRESETS.includes(presetRaw as Preset)
-    ? (presetRaw as Preset)
-    : pickOne(PRESETS, Math.random);
+  const preset = presetRaw && PRESETS.includes(presetRaw) ? presetRaw : undefined;
 
   return {
     mode: modeRaw,
-    target,
-    brand: getString(map, "brand") ?? path.basename(process.cwd()),
-    purpose: getString(map, "purpose") ?? "Refine UX and interaction quality for this app.",
+    target: getString(map, "target"),
+    brand: getString(map, "brand"),
+    purpose: getString(map, "purpose"),
     preset,
-    valueProps: splitCsv(getString(map, "value-props") ?? "Higher clarity,Faster action loops,Distinctive UI motion"),
-    cta: getString(map, "cta") ?? "Ship redesign",
+    valueProps: getString(map, "value-props") ? splitCsv(getString(map, "value-props") as string) : undefined,
+    cta: getString(map, "cta"),
     featureTileCount: parseOptionalInt(getString(map, "feature-count")),
     protocolStepCount: parseOptionalInt(getString(map, "protocol-count")),
+    resumeRef: getString(map, "resume"),
+    tweakNotes: getString(map, "tweak"),
+    preserveRunNonce: map.has("preserve-run-nonce"),
     dryRun: map.has("dry-run"),
+    noSave: map.has("no-save"),
     json: map.has("json"),
     outPath: getString(map, "out"),
     registryPath: path.resolve(getString(map, "registry") ?? getDefaultRegistryPath()),
+    sessionDir: path.resolve(getString(map, "session-dir") ?? getDefaultSessionDir()),
   };
 }
 
-function getString(map: Map<string, string | true>, key: string): string | undefined {
-  const value = map.get(key);
-  return typeof value === "string" ? value : undefined;
-}
-
-function parseOptionalInt(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) throw new Error(`Invalid numeric value: ${value}`);
-  return parsed;
-}
-
-function splitCsv(value: string): string[] {
-  return value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-}
-
-function printHelp(): void {
-  process.stdout.write(`saas-redesign\n\n`);
-  process.stdout.write(`Required:\n  --target \"dashboard KPI tiles\"\n\n`);
-  process.stdout.write(`Options:\n`);
-  process.stdout.write(`  --mode landing|platform (default: platform)\n`);
-  process.stdout.write(`  --brand \"Brand Name\"\n`);
-  process.stdout.write(`  --purpose \"One-line app purpose\"\n`);
-  process.stdout.write(`  --preset A|B|C|D (default: random)\n`);
-  process.stdout.write(`  --value-props \"A,B,C\"\n`);
-  process.stdout.write(`  --cta \"Start trial\"\n`);
-  process.stdout.write(`  --feature-count N\n`);
-  process.stdout.write(`  --protocol-count N\n`);
-  process.stdout.write(`  --registry /abs/path/registry.json\n`);
-  process.stdout.write(`  --json (emit JSON packet)\n`);
-  process.stdout.write(`  --out /abs/path/output.md\n`);
-  process.stdout.write(`  --dry-run (skip registry write)\n`);
+function toMarkdownOutput(markdown: string, session?: { id: string; path: string }): string {
+  if (!session) return markdown;
+  return `${markdown}\n\nSaved Session: ${session.id}\nSession Path: ${session.path}`;
 }
 
 main().catch((error) => {

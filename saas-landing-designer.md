@@ -93,34 +93,44 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
   - `navLinkCount`: 2-6
   - `offerBlockCount`: 1-3
 - **Required choices:**
+  - `marketingHeaderPattern`: `floating-island` | `static-full-width` | `sticky-full-width` | `offset-rail` | `minimal-top-bar`
   - `heroLayout`: `bottom-left-third` | `center-stage` | `split-screen` | `right-anchored` | `diagonal-band`
+  - `heroAdjacentPattern`: `feature-tiles` | `proof-metrics-band` | `interactive-demo-strip` | `manifesto-pullquote` | `use-case-marquee` | `timeline-intro`
   - `sectionOrderTemplate`: pick 1 of 8 templates with Navbar first and Footer last
+  - `sectionVariantMap`: assign a variant to each section (`hero`, `features`, `philosophy`, `protocol`, `conversion`, `footer`) from a variant pool; do not reuse the exact same map from recent outputs
   - `motionProfile`: `cinematic-float` | `crisp-editorial` | `mechanical-precision` | `quiet-luxury`
   - `visualMotif`: `grid` | `orbits` | `scanlines` | `glass-panels` | `paper-cuts` | `topographic-lines`
   - `featureAnimationPlan`: unique archetype assignment list with length = `featureTileCount`
   - `protocolAnimationPlan`: unique archetype assignment list with length = `protocolStepCount`
   - `tileGifDescriptors`: unique short descriptors for each feature tile animation
-- **Novelty gate:** compared to recent outputs, at least 5 of these must differ: section order, hero layout, feature tile count, protocol step count, offer block count, type pairing, motion profile, dominant motif, feature archetype set, protocol archetype set, tile GIF descriptor set.
+- **Novelty gate:** compared to recent outputs, at least 5 of these must differ: marketing header pattern, hero-adjacent pattern, section order, section variant map, hero layout, feature tile count, protocol step count, offer block count, type pairing, motion profile, dominant motif, feature archetype set, protocol archetype set, tile GIF descriptor set.
 - If novelty gate fails, regenerate `variationPlan` up to 2 times.
 - Respect session `animationRegistry`; never reuse any prior archetype ID or tile GIF descriptor from the same session.
+- Respect session `layoutRegistry`; never reuse any prior layout signature from the same session.
 
 ---
 
 ## Component Architecture (STRUCTURE VARIES, QUALITY STAYS FIXED)
 
 ### A. NAVBAR — "The Floating Island"
-- Fixed, centered pill container.
-- Morph from transparent/light text at top to blurred surface with border after hero scroll.
-- Includes logo, `navLinkCount` links, CTA button.
+- Use `marketingHeaderPattern` from `variationPlan`:
+  - `floating-island`: fixed centered pill with morph-on-scroll.
+  - `static-full-width`: top-anchored full-width header with strong baseline border.
+  - `sticky-full-width`: sticky full-width header with progressive blur/elevation.
+  - `offset-rail`: left-offset branded rail + right actions.
+  - `minimal-top-bar`: compressed bar with utility links and CTA.
+- Ensure mobile behavior and keyboard nav remain accessible for all patterns.
 
 ### B. HERO — "The Opening Shot"
 - `100dvh`, full-bleed Unsplash image with heavy gradient overlay.
 - Use `heroLayout` from `variationPlan`.
 - Dramatic typographic contrast using preset hero pattern.
 - GSAP staggered fade-up for text and CTA.
+- Immediately after hero, render `heroAdjacentPattern` (not always feature tiles).
 
 ### C. FEATURES — "Interactive Functional Artifacts"
 - Build `featureTileCount` interactive cards from value props.
+- Place features according to `sectionOrderTemplate`; do not hardcode features directly under hero.
 - Build `featureAnimationPlan` before card markup:
   - each tile gets `animationArchetypeId`, `primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`, `gifDescriptor`
   - no duplicate `animationArchetypeId` or `gifDescriptor` within the same output
@@ -176,9 +186,9 @@ Before generating UI, create a `variationPlan` object and apply it to every sect
 2. Build seeded `variationPlan`.
 3. Generate hero and conversion copy.
 4. Build sections from variant rules and randomized counts.
-5. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors.
+5. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors + layout signatures.
 6. Validate novelty gate and regenerate plan (max 2 retries) if needed.
-7. Persist this output's archetype descriptors into `noveltyMemory`.
+7. Persist archetype descriptors and layout signature into `noveltyMemory`.
 8. Implement in Next.js + Tailwind + GSAP with complete interactions.
 9. Run lint/typecheck and ensure all images/interactions work.
 

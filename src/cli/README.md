@@ -13,3 +13,9 @@ Or via the bin wrapper:
 ```bash
 ./bin/saas-redesign --target "dashboard tiles"
 ```
+
+Iterate from a prior run:
+
+```bash
+./bin/saas-redesign --resume <session-id> --tweak "Calmer motion, same layout"
+```

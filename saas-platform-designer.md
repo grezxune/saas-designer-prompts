@@ -102,17 +102,29 @@ Before generating UI, create a `variationPlan` object and use it to drive all la
   - `sidebarGroupCount`: 3-6
   - `primaryTableColumnCount`: 4-8
 - **Required layout choices (pick one each):**
+  - `marketingHeaderPattern`: `floating-island` | `static-full-width` | `sticky-full-width` | `offset-rail` | `minimal-top-bar`
   - `heroLayout`: `bottom-left-third` | `center-stage` | `split-screen` | `right-anchored` | `diagonal-band`
+  - `heroAdjacentPattern`: `feature-tiles` | `proof-metrics-band` | `interactive-demo-strip` | `manifesto-pullquote` | `use-case-marquee` | `timeline-intro`
   - `sectionOrderTemplate`: Pick 1 of 8 templates while keeping Navbar first and Footer last.
+  - `sectionVariantMap`: assign a variant to each marketing section (`hero`, `features`, `philosophy`, `protocol`, `conversion`, `footer`) from a variant pool; do not reuse the exact same map from recent outputs
   - `motionProfile`: `cinematic-float` | `crisp-editorial` | `mechanical-precision` | `quiet-luxury`
   - `visualMotif`: `grid` | `orbits` | `scanlines` | `glass-panels` | `paper-cuts` | `topographic-lines`
   - `appShellLayout`: `left-sidebar` | `dual-sidebar` | `top-nav + subnav` | `rail + panels`
+  - `appHeaderPattern`: `app-island` | `app-static-full-width` | `app-sticky-full-width` | `app-contextual-subnav` | `app-compact-toolbar`
   - `dashboardComposition`: `kpi-first` | `activity-first` | `workflow-first` | `mixed-command-center`
+  - `dashboardTemplate`: `kpi-ribbon-first` | `operational-command-center` | `narrative-insights` | `activity-river`
+  - `entityListTemplate`: `table-dominant` | `kanban-split` | `filter-board` | `timeline-list-hybrid`
+  - `entityDetailTemplate`: `summary-hero-plus-tabs` | `split-inspector` | `document-ledger` | `timeline-focus`
+  - `settingsTemplate`: `tabbed-pill-sections` | `left-nav-form-panels` | `stacked-cards` | `two-pane-preferences`
+  - `billingTemplate`: `plan-grid-plus-usage` | `invoice-ledger-first` | `tier-comparison-spotlight` | `hybrid-plan-history`
   - `featureAnimationPlan`: unique archetype assignment list with length = `featureTileCount`
   - `protocolAnimationPlan`: unique archetype assignment list with length = `protocolStepCount`
   - `tileGifDescriptors`: unique short descriptors for each feature tile animation
 - **Novelty gate (must pass):** Compared to recent outputs, at least 5 of these must differ:
+  - marketing header pattern
+  - hero-adjacent pattern
   - section order
+  - section variant map
   - hero layout
   - feature tile count
   - protocol step count
@@ -121,21 +133,28 @@ Before generating UI, create a `variationPlan` object and use it to drive all la
   - motion profile
   - dominant visual motif
   - app shell layout
+  - app header pattern
+  - page template set (dashboard/entity/settings/billing)
   - dashboard composition
   - feature archetype set
   - protocol archetype set
   - tile GIF descriptor set
 - If novelty gate fails, regenerate `variationPlan` up to 2 times before building.
 - Respect session `animationRegistry`; never reuse any prior archetype ID or tile GIF descriptor from the same session.
+- Respect session `layoutRegistry`; never reuse any prior layout signature from the same session.
 
 ---
 
 ## Component Architecture (STRUCTURE VARIES, QUALITY STAYS FIXED)
 
 ### A. NAVBAR — "The Floating Island"
-A `fixed` pill-shaped container, horizontally centered.
-- **Morphing Logic:** Transparent with light text at hero top. Transitions to `bg-[background]/60 backdrop-blur-xl` with primary-colored text and a subtle `border` when scrolled past the hero. Use `IntersectionObserver` or ScrollTrigger.
-- Contains: Logo (brand name as text), `navLinkCount` links, CTA button (accent color).
+Use `marketingHeaderPattern` from `variationPlan`:
+- `floating-island`: fixed centered pill with morph-on-scroll.
+- `static-full-width`: top-anchored full-width header with strong baseline border.
+- `sticky-full-width`: sticky full-width header with progressive blur/elevation.
+- `offset-rail`: left-offset branded rail + right actions.
+- `minimal-top-bar`: compressed bar with utility links and CTA.
+All patterns must preserve mobile navigation and keyboard support.
 
 ### B. HERO SECTION — "The Opening Shot"
 - `100dvh` height. Full-bleed background image (sourced from Unsplash matching preset's `imageMood`) with a heavy **primary-to-black gradient overlay** (`bg-gradient-to-t`).
@@ -143,9 +162,11 @@ A `fixed` pill-shaped container, horizontally centered.
 - **Typography:** Large scale contrast following the preset's hero line pattern. First part in bold sans heading font. Second part in massive serif italic drama font (3-5x size difference).
 - **Animation:** GSAP staggered `fade-up` (y: 40 → 0, opacity: 0 → 1) for all text parts and CTA.
 - CTA button below the headline, using the accent color.
+- Immediately after hero, render `heroAdjacentPattern` (not always feature tiles).
 
 ### C. FEATURES — "Interactive Functional Artifacts"
 Generate `featureTileCount` cards/tiles. Use the user's value props as source material, expanding or compressing copy as needed to fit the selected count. These must feel like **functional software micro-UIs**, not static marketing cards.
+Place features according to `sectionOrderTemplate`; do not hardcode features directly below hero.
 
 Build and validate `featureAnimationPlan` before writing card markup:
 - each tile gets `animationArchetypeId`, `primitive`, `tempoMs`, `pathProfile`, `interactionModel`, `easing`, `gifDescriptor`
@@ -225,6 +246,13 @@ Always build two surfaces in one project unless the user explicitly asks for mar
 ### App Shell & UX Rules
 
 - Build app shell from `appShellLayout` with responsive behavior for mobile/tablet/desktop.
+- Use `appHeaderPattern` for authenticated routes, consistent with selected shell layout.
+- Apply page template variants in tandem:
+  - dashboard uses `dashboardTemplate`
+  - entity list pages use `entityListTemplate`
+  - entity detail/manage pages use `entityDetailTemplate`
+  - settings pages use `settingsTemplate`
+  - billing pages use `billingTemplate`
 - Sidebar/nav uses `sidebarGroupCount` grouped navigation clusters with clear active states.
 - Data-heavy views must include polished states: loading, empty, error, success, disabled.
 - Primary entity table/list uses `primaryTableColumnCount` columns on desktop and collapses intelligently on mobile.
@@ -266,9 +294,9 @@ After receiving answers to the 8 questions:
 6. Implement required routes and modules for onboarding, dashboard, entity CRUD, settings, and selected extras.
 7. Implement auth wiring, role-based guards (when applicable), and billing/email integrations when selected.
 8. Define Convex schema and indexes aligned to core entities and ownership boundaries.
-9. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors.
+9. Validate no-repeat contract for feature/protocol archetypes + tile GIF descriptors + layout signatures.
 10. Validate novelty gate; if it fails, regenerate `variationPlan` (max 2 retries).
-11. Persist this output's archetype descriptors into `noveltyMemory`.
+11. Persist this output's archetype descriptors and layout signature into `noveltyMemory`.
 12. Scaffold with bun + Next.js App Router, install deps, write all files.
 13. Ensure every animation is wired, every interaction works, every image loads, and core CRUD flows are functional.
 14. Run lint, typecheck, and targeted tests before completion.
