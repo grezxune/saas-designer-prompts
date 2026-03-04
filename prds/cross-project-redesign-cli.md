@@ -8,6 +8,10 @@ log:
   - 2026-03-04: Added explicit GSAP recipe payloads per animation so implementation agents can execute motion deterministically.
   - 2026-03-04: Added saved-session and resume/tweak loop so agents can iterate from prior seeds without full re-specification.
   - 2026-03-04: Added layout variance requirements (header patterns + section/page templates) so seeds choose full composition plans in tandem.
+  - 2026-03-04: Implemented brand/copy/interaction/data-shape variance, rarity weighting, anti-clone fingerprints, novelty scoring, visual similarity signal, and registry lock safety.
+  - 2026-03-04: Added baseline current-state capture mode (`--capture-current`) so first-time projects can ingest existing UI state as an initial seed and then iterate with resume/tweak.
+  - 2026-03-04: Accepted `src/cli/redesign-prompt.ts` above 200 LOC temporarily because it is the single orchestration entrypoint for lock/registry/session flow; follow-up refactor can split argument parsing and selection logic.
+  - 2026-03-04: Added plain-English request parsing (`--request` / `--request-file`) with optional OpenRouter BYOK and local heuristic fallback so users can guide redesigns conversationally.
 ---
 
 ## Problem
@@ -42,6 +46,8 @@ The prompt repository should behave like a shared design engine that can be call
 11. CLI supports `--tweak` notes and emits source-session metadata in packet output for delta implementation.
 12. CLI packet must include `layoutVariantPlan` with header pattern, main-page composition, and app-page template variants.
 13. CLI uniqueness system must track and avoid repeated layout signatures across runs.
+14. CLI must support baseline ingestion for first-time projects: capture current-state metadata and persist it as a reusable seed in registry/session.
+15. CLI must accept plain-English redesign requests and map them into structured input fields, with optional external LLM parsing when API key is provided.
 
 ## Non-functional Requirements
 - Keep files modular and under readability limits.

@@ -30,10 +30,16 @@ describe("generateRedesignPacket", () => {
     expect(protocolSignatures.size).toBe(packet.protocolAnimations.length);
     expect(gifDescriptors.size).toBe(packet.featureAnimations.length);
     expect(packet.layoutSignature.length).toBeGreaterThan(12);
+    expect(packet.compositionFingerprint.length).toBeGreaterThan(8);
     expect(packet.layoutVariantPlan.marketingHeaderPattern.length).toBeGreaterThan(3);
     expect(packet.layoutVariantPlan.sectionOrderTemplate.includes("hero")).toBe(true);
     expect(packet.layoutVariantPlan.heroAdjacentPattern.length).toBeGreaterThan(3);
     expect(packet.layoutVariantPlan.appPageVariants).toBeDefined();
+    expect(packet.brandDnaSignature.length).toBeGreaterThan(8);
+    expect(packet.copyVoiceSignature.length).toBeGreaterThan(8);
+    expect(packet.interactionSignature.length).toBeGreaterThan(8);
+    expect(packet.dataShapeSignature.length).toBeGreaterThan(8);
+    expect(packet.variantTokens.length).toBeGreaterThan(10);
     expect(featureArchetypes.size).toBe(packet.featureAnimations.length);
     expect(protocolArchetypes.size).toBe(packet.protocolAnimations.length);
     for (const feature of packet.featureAnimations) {

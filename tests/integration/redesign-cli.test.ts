@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -50,12 +50,25 @@ describe("redesign CLI", () => {
     const p1 = JSON.parse(first.stdout) as {
       layoutSignature: string;
       layoutVariantPlan: { marketingHeaderPattern: string; heroAdjacentPattern: string };
+      brandDnaSignature: string;
+      copyVoiceSignature: string;
+      interactionSignature: string;
+      dataShapeSignature: string;
+      noveltyScore: number;
+      noveltyThreshold: number;
+      noveltyBreakdown: { visual: number };
       featureAnimations: { signature: string; gifDescriptor: string; gsapRecipe: { steps: unknown[] } }[];
       protocolAnimations: { signature: string; gsapRecipe: { steps: unknown[] } }[];
     };
     const p2 = JSON.parse(second.stdout) as {
       layoutSignature: string;
       layoutVariantPlan: { marketingHeaderPattern: string; heroAdjacentPattern: string };
+      brandDnaSignature: string;
+      copyVoiceSignature: string;
+      interactionSignature: string;
+      dataShapeSignature: string;
+      noveltyScore: number;
+      noveltyThreshold: number;
       featureAnimations: { signature: string; gifDescriptor: string; gsapRecipe: { steps: unknown[] } }[];
       protocolAnimations: { signature: string; gsapRecipe: { steps: unknown[] } }[];
     };
@@ -71,8 +84,13 @@ describe("redesign CLI", () => {
     expect([...pr1].filter((x) => pr2.has(x)).length).toBe(0);
     expect([...g1].filter((x) => g2.has(x)).length).toBe(0);
     expect(p1.layoutSignature).not.toBe(p2.layoutSignature);
+    expect(p1.brandDnaSignature).not.toBe(p2.brandDnaSignature);
+    expect(p1.copyVoiceSignature).not.toBe(p2.copyVoiceSignature);
     expect(p1.layoutVariantPlan.marketingHeaderPattern.length).toBeGreaterThan(3);
     expect(p1.layoutVariantPlan.heroAdjacentPattern.length).toBeGreaterThan(3);
+    expect(p1.noveltyScore).toBeGreaterThan(0);
+    expect(p1.noveltyThreshold).toBeGreaterThan(0);
+    expect(p1.noveltyBreakdown.visual).toBeGreaterThanOrEqual(0);
     expect(p1.featureAnimations.every((x) => x.gsapRecipe.steps.length > 0)).toBe(true);
     expect(p1.protocolAnimations.every((x) => x.gsapRecipe.steps.length > 0)).toBe(true);
 
@@ -83,6 +101,13 @@ describe("redesign CLI", () => {
       protocolSignatures: unknown[];
       gifDescriptors: unknown[];
       layoutSignatures: unknown[];
+      compositionFingerprints: unknown[];
+      brandDnaSignatures: unknown[];
+      copyVoiceSignatures: unknown[];
+      interactionSignatures: unknown[];
+      dataShapeSignatures: unknown[];
+      visualHashes: unknown[];
+      noveltyScores: unknown[];
     };
 
     expect(saved.sessions.length).toBe(2);
@@ -90,6 +115,13 @@ describe("redesign CLI", () => {
     expect(saved.protocolSignatures.length).toBeGreaterThanOrEqual(6);
     expect(saved.gifDescriptors.length).toBeGreaterThanOrEqual(8);
     expect(saved.layoutSignatures.length).toBeGreaterThanOrEqual(2);
+    expect(saved.compositionFingerprints.length).toBeGreaterThanOrEqual(2);
+    expect(saved.brandDnaSignatures.length).toBeGreaterThanOrEqual(2);
+    expect(saved.copyVoiceSignatures.length).toBeGreaterThanOrEqual(2);
+    expect(saved.interactionSignatures.length).toBeGreaterThanOrEqual(2);
+    expect(saved.dataShapeSignatures.length).toBeGreaterThanOrEqual(2);
+    expect(saved.visualHashes.length).toBeGreaterThanOrEqual(2);
+    expect(saved.noveltyScores.length).toBeGreaterThanOrEqual(2);
   });
 
   it("can resume from a saved session and apply tweak notes without full re-spec", () => {
@@ -156,5 +188,157 @@ describe("redesign CLI", () => {
     expect(p2.session?.id).not.toBe(p1.session?.id);
     expect(p2.promptMarkdown.includes("Source Session")).toBe(true);
     expect(p2.promptMarkdown.includes("delta iteration")).toBe(true);
+  });
+
+  it("captures current state as a baseline seed for first-time projects", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "saas-redesign-baseline-"));
+    const registry = path.join(dir, "registry.json");
+    const sessions = path.join(dir, "sessions");
+    const profile = path.join(dir, "current-state.json");
+
+    writeFileSync(
+      profile,
+      JSON.stringify({
+        mode: "platform",
+        target: "dashboard shell and header",
+        brand: "BaselineCo",
+        purpose: "Keep operations visible and calm",
+        preset: "B",
+        valueProps: ["Stable navigation", "Fast summaries", "Clear action states"],
+        cta: "Review dashboard",
+        currentStateNotes: "Today the product uses a static full-width header and dense KPI board.",
+      }),
+      "utf8",
+    );
+
+    const baseline = runCli([
+      "--capture-current",
+      "--current-state-file",
+      profile,
+      "--current-state",
+      "Card spacing is tight and interactions are quiet.",
+      "--registry",
+      registry,
+      "--session-dir",
+      sessions,
+      "--json",
+    ]);
+    expect(baseline.exitCode).toBe(0);
+
+    const p1 = JSON.parse(baseline.stdout) as {
+      seedKind: string;
+      currentStateNotes?: string;
+      runNonce: string;
+      session?: { id: string };
+      target: string;
+    };
+
+    expect(p1.seedKind).toBe("baseline-current-state");
+    expect(p1.runNonce.startsWith("baseline-")).toBe(true);
+    expect((p1.currentStateNotes ?? "").includes("static full-width header")).toBe(true);
+    expect((p1.currentStateNotes ?? "").includes("interactions are quiet")).toBe(true);
+    expect(typeof p1.session?.id).toBe("string");
+
+    const resumed = runCli([
+      "--resume",
+      p1.session?.id ?? "",
+      "--session-dir",
+      sessions,
+      "--registry",
+      registry,
+      "--tweak",
+      "Redesign only the header and dashboard cards with higher contrast.",
+      "--json",
+    ]);
+    expect(resumed.exitCode).toBe(0);
+
+    const p2 = JSON.parse(resumed.stdout) as {
+      seedKind: string;
+      sourceSessionId?: string;
+      target: string;
+      tweakNotes?: string;
+    };
+
+    expect(p2.seedKind).toBe("generated");
+    expect(p2.sourceSessionId).toBe(p1.session?.id);
+    expect(p2.target).toBe(p1.target);
+    expect(p2.tweakNotes).toBe("Redesign only the header and dashboard cards with higher contrast.");
+  });
+
+  it("accepts plain-English request input and maps it into redesign fields", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "saas-redesign-nl-"));
+    const registry = path.join(dir, "registry.json");
+
+    const result = runCli([
+      "--request",
+      "mode: platform. target: billing table interactions. brand: NovaOps. purpose: reduce invoice confusion. preset: D. value props: Instant totals, Clear statuses, One-click exports. cta: Start pilot. Use 5 feature tiles and 4 protocol steps. tweak: keep IA stable but make motion bolder.",
+      "--no-ai",
+      "--registry",
+      registry,
+      "--json",
+      "--dry-run",
+      "--no-save",
+    ]);
+    expect(result.exitCode).toBe(0);
+
+    const packet = JSON.parse(result.stdout) as {
+      mode: string;
+      target: string;
+      preset: string;
+      featureAnimations: unknown[];
+      protocolAnimations: unknown[];
+      tweakNotes?: string;
+      requestInterpretation?: { parser: string; raw: string };
+      promptMarkdown: string;
+    };
+
+    expect(packet.mode).toBe("platform");
+    expect(packet.target).toContain("billing table interactions");
+    expect(packet.preset).toBe("D");
+    expect(packet.featureAnimations.length).toBe(5);
+    expect(packet.protocolAnimations.length).toBe(4);
+    expect(packet.promptMarkdown.includes("\"Instant totals\"")).toBe(true);
+    expect(packet.promptMarkdown.includes("\"Clear statuses\"")).toBe(true);
+    expect(packet.promptMarkdown.includes("\"One-click exports\"")).toBe(true);
+    expect(packet.promptMarkdown.includes("\"cta\": \"Start pilot\"")).toBe(true);
+    expect(packet.tweakNotes?.includes("make motion bolder")).toBe(true);
+    expect(packet.requestInterpretation?.parser).toBe("heuristic");
+    expect(packet.promptMarkdown.includes("Request Parser")).toBe(true);
+  });
+
+  it("accepts plain-English request from file input", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "saas-redesign-nl-file-"));
+    const registry = path.join(dir, "registry.json");
+    const requestPath = path.join(dir, "request.txt");
+
+    writeFileSync(
+      requestPath,
+      "target: notifications command center. brand: RadarCo. preset: A. cta: Explore alerts.",
+      "utf8",
+    );
+
+    const result = runCli([
+      "--request-file",
+      requestPath,
+      "--no-ai",
+      "--registry",
+      registry,
+      "--json",
+      "--dry-run",
+      "--no-save",
+    ]);
+    expect(result.exitCode).toBe(0);
+
+    const packet = JSON.parse(result.stdout) as {
+      target: string;
+      preset: string;
+      requestInterpretation?: { parser: string; raw: string };
+      promptMarkdown: string;
+    };
+
+    expect(packet.target).toContain("notifications command center");
+    expect(packet.preset).toBe("A");
+    expect(packet.requestInterpretation?.parser).toBe("heuristic");
+    expect(packet.promptMarkdown.includes("RadarCo")).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { normalizeRegistry } from "./registry-normalize";
 
 export interface RegistrySession {
   generatedAt: string;
@@ -10,6 +11,14 @@ export interface RegistrySession {
   protocolSignatures: string[];
   gifDescriptors: string[];
   layoutSignatures: string[];
+  compositionFingerprints: string[];
+  brandDnaSignatures: string[];
+  copyVoiceSignatures: string[];
+  interactionSignatures: string[];
+  dataShapeSignatures: string[];
+  visualHashes: string[];
+  noveltyScores: number[];
+  variantTokens: string[];
 }
 
 export interface UniquenessRegistry {
@@ -19,6 +28,13 @@ export interface UniquenessRegistry {
   protocolSignatures: string[];
   gifDescriptors: string[];
   layoutSignatures: string[];
+  compositionFingerprints: string[];
+  brandDnaSignatures: string[];
+  copyVoiceSignatures: string[];
+  interactionSignatures: string[];
+  dataShapeSignatures: string[];
+  visualHashes: string[];
+  noveltyScores: number[];
   sessions: RegistrySession[];
 }
 
@@ -41,6 +57,13 @@ export function createEmptyRegistry(): UniquenessRegistry {
     protocolSignatures: [],
     gifDescriptors: [],
     layoutSignatures: [],
+    compositionFingerprints: [],
+    brandDnaSignatures: [],
+    copyVoiceSignatures: [],
+    interactionSignatures: [],
+    dataShapeSignatures: [],
+    visualHashes: [],
+    noveltyScores: [],
     sessions: [],
   };
 }
@@ -52,7 +75,7 @@ export async function loadRegistry(registryPath: string): Promise<UniquenessRegi
   try {
     const raw = await readFile(registryPath, "utf8");
     const parsed = JSON.parse(raw) as Partial<UniquenessRegistry>;
-    return normalizeRegistry(parsed);
+    return normalizeRegistry(parsed, createEmptyRegistry);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
@@ -83,11 +106,25 @@ export function recordSession(
   const protocolSet = new Set(registry.protocolSignatures);
   const gifSet = new Set(registry.gifDescriptors);
   const layoutSet = new Set(registry.layoutSignatures);
+  const compositionSet = new Set(registry.compositionFingerprints);
+  const brandSet = new Set(registry.brandDnaSignatures);
+  const voiceSet = new Set(registry.copyVoiceSignatures);
+  const interactionSet = new Set(registry.interactionSignatures);
+  const dataShapeSet = new Set(registry.dataShapeSignatures);
+  const visualSet = new Set(registry.visualHashes);
+  const noveltyScores = [...registry.noveltyScores];
 
   for (const sig of session.featureSignatures) featureSet.add(sig);
   for (const sig of session.protocolSignatures) protocolSet.add(sig);
   for (const gif of session.gifDescriptors) gifSet.add(gif);
   for (const layout of session.layoutSignatures) layoutSet.add(layout);
+  for (const composition of session.compositionFingerprints) compositionSet.add(composition);
+  for (const brand of session.brandDnaSignatures) brandSet.add(brand);
+  for (const voice of session.copyVoiceSignatures) voiceSet.add(voice);
+  for (const interaction of session.interactionSignatures) interactionSet.add(interaction);
+  for (const dataShape of session.dataShapeSignatures) dataShapeSet.add(dataShape);
+  for (const visual of session.visualHashes) visualSet.add(visual);
+  for (const score of session.noveltyScores) noveltyScores.push(score);
 
   const sessions = [session, ...registry.sessions].slice(0, 500);
 
@@ -98,56 +135,13 @@ export function recordSession(
     protocolSignatures: [...protocolSet],
     gifDescriptors: [...gifSet],
     layoutSignatures: [...layoutSet],
+    compositionFingerprints: [...compositionSet],
+    brandDnaSignatures: [...brandSet],
+    copyVoiceSignatures: [...voiceSet],
+    interactionSignatures: [...interactionSet],
+    dataShapeSignatures: [...dataShapeSet],
+    visualHashes: [...visualSet],
+    noveltyScores: noveltyScores.slice(-1000),
     sessions,
-  };
-}
-
-function normalizeRegistry(input: Partial<UniquenessRegistry>): UniquenessRegistry {
-  if (input.version !== 1) {
-    return createEmptyRegistry();
-  }
-  return {
-    version: 1,
-    updatedAt: typeof input.updatedAt === "string" ? input.updatedAt : new Date().toISOString(),
-    featureSignatures: Array.isArray(input.featureSignatures)
-      ? input.featureSignatures.filter((v): v is string => typeof v === "string")
-      : [],
-    protocolSignatures: Array.isArray(input.protocolSignatures)
-      ? input.protocolSignatures.filter((v): v is string => typeof v === "string")
-      : [],
-    gifDescriptors: Array.isArray(input.gifDescriptors)
-      ? input.gifDescriptors.filter((v): v is string => typeof v === "string")
-      : [],
-    layoutSignatures: Array.isArray(input.layoutSignatures)
-      ? input.layoutSignatures.filter((v): v is string => typeof v === "string")
-      : [],
-    sessions: Array.isArray(input.sessions)
-      ? input.sessions
-          .filter((s): s is Partial<RegistrySession> => {
-            return Boolean(
-              s &&
-                typeof s.generatedAt === "string" &&
-                (s.mode === "landing" || s.mode === "platform") &&
-                typeof s.target === "string" &&
-                typeof s.runNonce === "string" &&
-                Array.isArray(s.featureSignatures) &&
-                Array.isArray(s.protocolSignatures) &&
-                Array.isArray(s.gifDescriptors),
-            );
-          })
-          .map((s) => ({
-            generatedAt: s.generatedAt as string,
-            mode: s.mode as "landing" | "platform",
-            target: s.target as string,
-            runNonce: s.runNonce as string,
-            featureSignatures: s.featureSignatures as string[],
-            protocolSignatures: s.protocolSignatures as string[],
-            gifDescriptors: s.gifDescriptors as string[],
-            layoutSignatures: Array.isArray(s.layoutSignatures)
-              ? (s.layoutSignatures.filter((v): v is string => typeof v === "string"))
-              : [],
-          }))
-          .slice(0, 500)
-      : [],
   };
 }

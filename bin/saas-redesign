@@ -2,4 +2,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load machine-local secrets if present (keeps keys out of repo files).
+if [[ -f "$HOME/.saas-designer-prompts/env" ]]; then
+  # shellcheck disable=SC1090
+  source "$HOME/.saas-designer-prompts/env"
+fi
+
 exec bun run "$SCRIPT_DIR/../src/cli/redesign-prompt.ts" "$@"

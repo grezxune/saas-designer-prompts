@@ -1,27 +1,23 @@
 import { createRng, pickInt, pickOne, shortHash } from "./random";
 import type { UniquenessRegistry } from "./registry";
 import { buildPromptMarkdown } from "./prompt-markdown";
-import type {
-  FeatureAnimation,
-  ProtocolAnimation,
-  RedesignInput,
-  RedesignPacket,
-} from "./redesign-types";
+import type { FeatureAnimation, ProtocolAnimation, RedesignInput, RedesignPacket } from "./redesign-types";
+import { buildFeatureGsapRecipe, buildProtocolGsapRecipe } from "./gsap-recipe";
+import { createUniqueLayoutVariantPlan, layoutTokens } from "./layout-variants";
+import { buildUsageMap } from "./rarity";
+import { brandDnaTokens, createBrandDnaPlan, makeBrandDnaSignature } from "./brand-dna";
+import { copyVoiceTokens, createCopyVoicePlan, makeCopyVoiceSignature } from "./copy-voice";
 import {
-  buildFeatureGsapRecipe,
-  buildProtocolGsapRecipe,
-} from "./gsap-recipe";
-import { createUniqueLayoutVariantPlan } from "./layout-variants";
+  createDataShapePlan,
+  createPageInteractionPlan,
+  dataShapeTokens,
+  interactionTokens,
+  makeDataShapeSignature,
+  makeInteractionSignature,
+} from "./interaction-data-variants";
 
-const FEATURE_ARCHETYPES = [
-  "diagnostic-shuffler", "telemetry-typewriter", "cursor-protocol-scheduler", "radial-kpi-dial",
-  "timeline-scrubber", "command-palette-preview", "split-funnel-analyzer", "queue-heatmap",
-  "waveform-comparator", "packet-lattice", "kinetic-sparkline-matrix", "orbit-handoff-map",
-] as const;
-const PROTOCOL_ARCHETYPES = [
-  "rotating-geomotif", "scanning-laser-line", "pulsing-waveform", "particle-drift-field",
-  "path-trace-map", "contour-sweep-graph", "phase-lens-stack", "node-latency-ribbon",
-] as const;
+const FEATURE_ARCHETYPES = ["diagnostic-shuffler", "telemetry-typewriter", "cursor-protocol-scheduler", "radial-kpi-dial", "timeline-scrubber", "command-palette-preview", "split-funnel-analyzer", "queue-heatmap", "waveform-comparator", "packet-lattice", "kinetic-sparkline-matrix", "orbit-handoff-map"] as const;
+const PROTOCOL_ARCHETYPES = ["rotating-geomotif", "scanning-laser-line", "pulsing-waveform", "particle-drift-field", "path-trace-map", "contour-sweep-graph", "phase-lens-stack", "node-latency-ribbon"] as const;
 const PRIMITIVES = ["morph", "pulse", "orbit", "wipe", "scan", "stack", "trace", "flip"] as const;
 const PATHS = ["arc", "zigzag", "bezier", "lattice", "spiral", "step", "sine", "radial"] as const;
 const INTERACTIONS = ["hover-reactive", "timeline-driven", "cursor-led", "auto-loop", "input-coupled"] as const;
@@ -33,47 +29,61 @@ const GIF_B = ["queue", "matrix", "cursor", "scanline", "wave", "funnel", "dial"
 const GIF_C = ["burst", "cascade", "handoff", "trace", "drift", "sweep", "glide"] as const;
 
 /**
- * Generates a uniqueness-checked redesign packet and prompt markdown.
+ * Generates a redesign packet with layout/style/interaction/data + animation plans.
  */
 export function generateRedesignPacket(input: RedesignInput, registry: UniquenessRegistry): RedesignPacket {
   const seed = `${input.brand}|${input.purpose}|${input.mode}|${input.preset}|${input.target}|${input.runNonce}`;
   const rng = createRng(seed);
+  const usage = buildUsageMap(registry);
+
   const featureTileCount = input.featureTileCount ?? pickInt(2, 6, rng);
   const protocolStepCount = input.protocolStepCount ?? pickInt(2, 5, rng);
+
+  const brandDnaPlan = createBrandDnaPlan(rng, usage);
+  const copyVoicePlan = createCopyVoicePlan(rng, usage);
+  const pageInteractionPlan = createPageInteractionPlan(rng, usage);
+  const dataShapePlan = createDataShapePlan(rng, usage);
+
+  const { layoutVariantPlan, layoutSignature, compositionFingerprint, tokens: layoutVariantTokens } =
+    createUniqueLayoutVariantPlan(
+      input.mode,
+      rng,
+      new Set(registry.layoutSignatures),
+      new Set(registry.compositionFingerprints.slice(-50)),
+      usage,
+    );
 
   const usedFeature = new Set(registry.featureSignatures);
   const usedProtocol = new Set(registry.protocolSignatures);
   const usedGif = new Set(registry.gifDescriptors);
-  const usedLayouts = new Set(registry.layoutSignatures);
   const localFeature = new Set<string>();
   const localProtocol = new Set<string>();
   const localGif = new Set<string>();
   const localFeatureArchetypes = new Set<string>();
   const localProtocolArchetypes = new Set<string>();
-  const { layoutVariantPlan, layoutSignature } = createUniqueLayoutVariantPlan(input.mode, rng, usedLayouts);
 
   const featureAnimations: FeatureAnimation[] = [];
   for (let i = 0; i < featureTileCount; i += 1) {
-    featureAnimations.push(
-      createUniqueFeature(
-        i,
-        rng,
-        input.runNonce,
-        usedFeature,
-        localFeature,
-        usedGif,
-        localGif,
-        localFeatureArchetypes,
-      ),
-    );
+    featureAnimations.push(createUniqueFeature(i, rng, input.runNonce, usedFeature, localFeature, usedGif, localGif, localFeatureArchetypes));
   }
 
   const protocolAnimations: ProtocolAnimation[] = [];
   for (let i = 0; i < protocolStepCount; i += 1) {
-    protocolAnimations.push(
-      createUniqueProtocol(i, rng, input.runNonce, usedProtocol, localProtocol, localProtocolArchetypes),
-    );
+    protocolAnimations.push(createUniqueProtocol(i, rng, input.runNonce, usedProtocol, localProtocol, localProtocolArchetypes));
   }
+
+  const brandDnaSignature = makeBrandDnaSignature(brandDnaPlan);
+  const copyVoiceSignature = makeCopyVoiceSignature(copyVoicePlan);
+  const interactionSignature = makeInteractionSignature(pageInteractionPlan);
+  const dataShapeSignature = makeDataShapeSignature(dataShapePlan);
+
+  const variantTokens = [
+    ...layoutVariantTokens,
+    ...brandDnaTokens(brandDnaPlan),
+    ...copyVoiceTokens(copyVoicePlan),
+    ...interactionTokens(pageInteractionPlan),
+    ...dataShapeTokens(dataShapePlan),
+  ];
 
   return {
     generatedAt: new Date().toISOString(),
@@ -83,24 +93,45 @@ export function generateRedesignPacket(input: RedesignInput, registry: Uniquenes
     runNonce: input.runNonce,
     sourceSessionId: input.sourceSessionId,
     tweakNotes: input.tweakNotes,
+    seedKind: input.seedKind ?? "generated",
+    currentStateNotes: input.currentStateNotes,
+    requestInterpretation: input.requestInterpretation,
     layoutSignature,
+    compositionFingerprint,
+    brandDnaSignature,
+    copyVoiceSignature,
+    interactionSignature,
+    dataShapeSignature,
     layoutVariantPlan,
+    brandDnaPlan,
+    copyVoicePlan,
+    pageInteractionPlan,
+    dataShapePlan,
+    noveltyScore: 0,
+    noveltyThreshold: 72,
+    noveltyPassed: false,
+    noveltyBreakdown: { layout: 0, style: 0, behavior: 0, motion: 0, visual: 0 },
+    visualMethod: "structural-hash",
+    visualHash: "",
+    visualDistance: 0,
+    variantTokens,
     featureAnimations,
     protocolAnimations,
-    promptMarkdown: buildPromptMarkdown(input, layoutVariantPlan, layoutSignature, featureAnimations, protocolAnimations),
+    promptMarkdown: buildPromptMarkdown(
+      input,
+      layoutVariantPlan,
+      layoutSignature,
+      brandDnaPlan,
+      copyVoicePlan,
+      pageInteractionPlan,
+      dataShapePlan,
+      featureAnimations,
+      protocolAnimations,
+    ),
   };
 }
 
-function createUniqueFeature(
-  index: number,
-  rng: () => number,
-  runNonce: string,
-  usedFeature: Set<string>,
-  localFeature: Set<string>,
-  usedGif: Set<string>,
-  localGif: Set<string>,
-  localFeatureArchetypes: Set<string>,
-): FeatureAnimation {
+function createUniqueFeature(index: number, rng: () => number, runNonce: string, usedFeature: Set<string>, localFeature: Set<string>, usedGif: Set<string>, localGif: Set<string>, localFeatureArchetypes: Set<string>): FeatureAnimation {
   for (let attempt = 0; attempt < 2000; attempt += 1) {
     const archetype = pickOne(FEATURE_ARCHETYPES, rng);
     const primitive = pickOne(PRIMITIVES, rng);
@@ -110,16 +141,8 @@ function createUniqueFeature(
     const easing = pickOne(EASINGS, rng);
     const signature = `${archetype}|${primitive}|${tempoMs}|${pathProfile}|${interactionModel}|${easing}`;
     const descriptor = `${pickOne(GIF_A, rng)}-${pickOne(GIF_B, rng)}-${pickOne(GIF_C, rng)}-${shortHash(`${runNonce}|${index}|${attempt}`)}`;
-    if (
-      !usedFeature.has(signature) &&
-      !localFeature.has(signature) &&
-      !usedGif.has(descriptor) &&
-      !localGif.has(descriptor) &&
-      !localFeatureArchetypes.has(archetype)
-    ) {
-      localFeature.add(signature);
-      localGif.add(descriptor);
-      localFeatureArchetypes.add(archetype);
+    if (!usedFeature.has(signature) && !localFeature.has(signature) && !usedGif.has(descriptor) && !localGif.has(descriptor) && !localFeatureArchetypes.has(archetype)) {
+      localFeature.add(signature); localGif.add(descriptor); localFeatureArchetypes.add(archetype);
       return {
         animationArchetypeId: `ft-${shortHash(`${signature}|${runNonce}|${index}`)}`,
         signature,
@@ -129,28 +152,14 @@ function createUniqueFeature(
         pathProfile,
         interactionModel,
         easing,
-        gsapRecipe: buildFeatureGsapRecipe({
-          index,
-          primitive,
-          tempoMs,
-          pathProfile,
-          interactionModel,
-          easing,
-        }),
+        gsapRecipe: buildFeatureGsapRecipe({ index, primitive, tempoMs, pathProfile, interactionModel, easing }),
       };
     }
   }
   throw new Error("Failed to generate unique feature animation after 2000 attempts.");
 }
 
-function createUniqueProtocol(
-  index: number,
-  rng: () => number,
-  runNonce: string,
-  usedProtocol: Set<string>,
-  localProtocol: Set<string>,
-  localProtocolArchetypes: Set<string>,
-): ProtocolAnimation {
+function createUniqueProtocol(index: number, rng: () => number, runNonce: string, usedProtocol: Set<string>, localProtocol: Set<string>, localProtocolArchetypes: Set<string>): ProtocolAnimation {
   for (let attempt = 0; attempt < 2000; attempt += 1) {
     const archetype = pickOne(PROTOCOL_ARCHETYPES, rng);
     const primitive = pickOne(PRIMITIVES, rng);
@@ -160,8 +169,7 @@ function createUniqueProtocol(
     const lineStyle = pickOne(LINES, rng);
     const signature = `${archetype}|${primitive}|${tempoMs}|${spatialPath}|${phaseOffset}|${lineStyle}`;
     if (!usedProtocol.has(signature) && !localProtocol.has(signature) && !localProtocolArchetypes.has(archetype)) {
-      localProtocol.add(signature);
-      localProtocolArchetypes.add(archetype);
+      localProtocol.add(signature); localProtocolArchetypes.add(archetype);
       return {
         animationArchetypeId: `pt-${shortHash(`${signature}|${runNonce}|${index}`)}`,
         signature,
@@ -170,14 +178,7 @@ function createUniqueProtocol(
         spatialPath,
         phaseOffset,
         lineStyle,
-        gsapRecipe: buildProtocolGsapRecipe({
-          index,
-          primitive,
-          tempoMs,
-          spatialPath,
-          phaseOffset,
-          lineStyle,
-        }),
+        gsapRecipe: buildProtocolGsapRecipe({ index, primitive, tempoMs, spatialPath, phaseOffset, lineStyle }),
       };
     }
   }

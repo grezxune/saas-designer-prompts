@@ -12,5 +12,8 @@ All notable changes to this project will be documented in this file.
 - feat: add explicit per-animation `gsapRecipe` blocks so downstream agents can implement motion without inferring from signatures.
 - feat: add saved session artifacts + `--resume` / `--tweak` flow for iterative seed feedback without full regeneration setup.
 - feat: add layout variance engine (header styles, hero-adjacent blocks, section/page templates) with layout signature dedupe across runs.
+- feat: add brand/copy/interaction/data-shape variance plans, rarity-weighted selection, anti-clone composition fingerprints, novelty scoring, visual similarity signal, and file-lock based concurrency safety.
+- feat: add `--capture-current` baseline mode with `--current-state` / `--current-state-file` so first-time projects can ingest current-state seeds and iterate via `--resume`.
+- feat: add plain-English request ingestion (`--request` / `--request-file`) with optional OpenRouter BYOK parsing and heuristic fallback.
 - test: add unit and integration tests for generation uniqueness and CLI registry behavior.
 - docs: add PRD `prds/cross-project-redesign-cli.md` and usage docs in `README.md`.

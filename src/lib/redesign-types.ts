@@ -1,7 +1,17 @@
 import type { GsapRecipe } from "./gsap-recipe";
+import type { BrandDnaPlan } from "./brand-dna";
+import type { CopyVoicePlan } from "./copy-voice";
+import type { DataShapePlan, PageInteractionPlan } from "./interaction-data-variants";
+import type { NoveltyBreakdown } from "./novelty-score";
 
 export type Mode = "landing" | "platform";
 export type Preset = "A" | "B" | "C" | "D";
+export type SeedKind = "generated" | "baseline-current-state";
+
+export interface RequestInterpretation {
+  parser: "openrouter" | "heuristic";
+  raw: string;
+}
 
 export interface RedesignInput {
   mode: Mode;
@@ -16,6 +26,9 @@ export interface RedesignInput {
   protocolStepCount?: number;
   sourceSessionId?: string;
   tweakNotes?: string;
+  seedKind?: SeedKind;
+  currentStateNotes?: string;
+  requestInterpretation?: RequestInterpretation;
 }
 
 export interface FeatureAnimation {
@@ -73,8 +86,28 @@ export interface RedesignPacket {
   runNonce: string;
   sourceSessionId?: string;
   tweakNotes?: string;
+  seedKind: SeedKind;
+  currentStateNotes?: string;
+  requestInterpretation?: RequestInterpretation;
   layoutSignature: string;
+  compositionFingerprint: string;
+  brandDnaSignature: string;
+  copyVoiceSignature: string;
+  interactionSignature: string;
+  dataShapeSignature: string;
   layoutVariantPlan: LayoutVariantPlan;
+  brandDnaPlan: BrandDnaPlan;
+  copyVoicePlan: CopyVoicePlan;
+  pageInteractionPlan: PageInteractionPlan;
+  dataShapePlan: DataShapePlan;
+  noveltyScore: number;
+  noveltyThreshold: number;
+  noveltyPassed: boolean;
+  noveltyBreakdown: NoveltyBreakdown;
+  visualMethod: "playwright-image-hash" | "structural-hash";
+  visualHash: string;
+  visualDistance: number;
+  variantTokens: string[];
   featureAnimations: FeatureAnimation[];
   protocolAnimations: ProtocolAnimation[];
   promptMarkdown: string;
